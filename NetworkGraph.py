@@ -4,14 +4,18 @@
 Class utilising the NetworkX graph object with manual implementation of key algorithms
 """
 import networkx as nx
+import pandas as pd
 
 
 class NetworkGraph:
 
-    def __init__(self, edgeList):
+    def __init__(self, input):
         """ Initialise the graph object using the edgelist provided """
-        self.graph = nx.DiGraph()
-        self.graph.add_weighted_edges_from(edgeList)
+        if isinstance(input, list):
+            self.graph = nx.DiGraph()
+            self.graph.add_weighted_edges_from(input)
+        elif isinstance(input, nx.DiGraph):
+            self.graph = input
 
         self.cycles = []            # List of cycles
         self.components = []        # List of connected components
@@ -79,6 +83,7 @@ class NetworkGraph:
         self.BronKerbosh(set(), set(self.graph.nodes()), set(), 0)
 
     def BronKerbosh(self, R, P, X, depth):
+        # Comprehensive testing needed on the use of set objects rather than lists
         if len(P) == 0 and len(X) == 0:
             self.maximal_cliques.append(list(R))
             return
@@ -109,4 +114,12 @@ if __name__ == "__main__":
     print(n2.maximal_cliques)
 
     print(list(nx.find_cliques(n2.graph.to_undirected())))
+
+    print("Test graph input")
+    g=nx.DiGraph()
+    g.add_weighted_edges_from(edges2)
+
+    n3 = NetworkGraph(g)
+    print(n2.sources)
+
 
