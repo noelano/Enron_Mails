@@ -4,7 +4,6 @@
 Class utilising the NetworkX graph object with manual implementation of key algorithms
 """
 import networkx as nx
-import pandas as pd
 
 
 class NetworkGraph:
@@ -38,9 +37,13 @@ class NetworkGraph:
             # The node has already been visited => cycle
             # Need to remove the path up to the node
             ind = path.index(node)
-            self.cycles.append(path[ind:]+[node])
-            # Note that to better display the cycle, the node is added again to bookend it
-            # This may need to be dropped for producing the output
+            p = path[ind:]
+
+            # In the event that this is one node, don't add it
+            if len(p) > 1:
+                self.cycles.append(path[ind:]+[node])
+                # Note that to better display the cycle, the node is added again to bookend it
+                # This may need to be dropped for producing the output
         else:
             # Continue searching descendents
             count += 1
