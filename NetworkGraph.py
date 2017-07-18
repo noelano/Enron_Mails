@@ -41,9 +41,8 @@ class NetworkGraph:
 
             # In the event that this is one node, don't add it
             if len(p) > 1:
-                self.cycles.append(path[ind:]+[node])
-                # Note that to better display the cycle, the node is added again to bookend it
-                # This may need to be dropped for producing the output
+                self.cycles.append(path[ind:])
+
         else:
             # Continue searching descendents
             count += 1
@@ -51,18 +50,80 @@ class NetworkGraph:
             for child in self.graph.successors(node):
                 self.recursiveCycle(child, count, path[:])
 
+    def slowCycles(self):
+        """ Slow implemtation of cycle finder using path search """
+        branch_points = []
+        branch_dict = {}
+        #search_space = self.graph.copy()
+
+        for s in self.sources:
+            path = [s]
+
+            while True:
+                last = path[-1]
+
+                out_degree = self.graph.out_degree(last)
+
+                if out_degree == 0:
+                    # node is a sink, try previous branch nodes
+                    if branch_points:
+                        last_branch = branch_points[-1]
+                        last = branch_dict[last_branch].pop()
+
+                        if len(branch_dict[last_branch]) == 0:
+                            branch_points.remove(last_branch)
+                            del (branch_dict[last_branch])
+                        ind = path.index(last_branch)
+                        path = path[:ind + 1]
+                        path.append(last)
+                    else:
+                        # no remaining branch points => end search
+                        break
+
+                else:
+                    next = self.graph.successors(last)[0]
+
+                    if next in path:
+                        # A cycle has been found
+                        ind = path.index(next)
+                        self.cycles.append(path[ind:])
+
+                        # Need to stop searching and go back to last branch to continue
+                        if branch_points:
+                            last_branch = branch_points[-1]
+                            last = branch_dict[last_branch].pop()
+
+                            if len(branch_dict[last_branch]) == 0:
+                                branch_points.remove(last_branch)
+                                del (branch_dict[last_branch])
+                            ind = path.index(last_branch)
+                            path = path[:ind+1]
+                            path.append(last)
+                            continue
+                        else:
+                            # no remaining branch points => end search
+                            break
+
+                    if out_degree > 1:
+                        if last not in branch_points:
+                            branch_points.append(last)
+                            branch_dict[last] = list(self.graph.successors(last))
+                            branch_dict[last].remove(next)
+
+                    path.append(next)
+
+
     def printCycles(self):
         for c in self.cycles:
+            c = c[:]    # Copy to avoid updating original list object
+            c.append(c[0])  # To illustrate returning to starting point
             s = '->'.join([str(x) for x in c])
             print s
 
     def findVolcanos(self):
         pass
 
-    def findSinks(self):
-        pass
-
-    def findCliques(self):
+    def findBlackHoles(self):
         pass
 
     def adjacencyMatrix(self):
@@ -107,8 +168,11 @@ if __name__ == "__main__":
 
     edges2 = [(1, 2, 1), (2, 3, 1), (3, 4, 1), (3, 5, 1), (5, 4, 1), (4, 2, 1)]
     n2 = NetworkGraph(edges2)
-    n2.findCycles()
+    #n2.findCycles()
+    #n2.printCycles()
+    n2.slowCycles()
     n2.printCycles()
+    print(n2.cycles)
 
     for n in n2.graph.nodes():
         print list(nx.all_neighbors(n2.graph, n))
