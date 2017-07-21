@@ -4,6 +4,7 @@
 Class utilising the NetworkX graph object with manual implementation of key algorithms
 """
 import networkx as nx
+import pandas as pd
 
 
 class NetworkGraph:
@@ -21,15 +22,16 @@ class NetworkGraph:
         self.sources = [node for node, indegree in self.graph.in_degree(self.graph.nodes()).items() if indegree == 0]
         self.sinks = [node for node, outdegree in self.graph.out_degree(self.graph.nodes()).items() if outdegree == 0]
         self.maximal_cliques = []
+        self.black_holes = []
+        self.volcanoes = []
+        self.distances = None
 
-    def findCycles(self, outputFile=None):
+
+    def findCycles(self):
         """ Return a list of cycles in the graph """
         for s in self.sources:
             self.recursiveCycle(s, 0, [])
 
-        if outputFile:
-            # TODO: Output to csv file
-            pass
 
     def recursiveCycle(self, node, count, path):
         """ Recursively apply path search to identify cycles in the graph """
@@ -50,11 +52,11 @@ class NetworkGraph:
             for child in self.graph.successors(node):
                 self.recursiveCycle(child, count, path[:])
 
+
     def slowCycles(self):
         """ Slow implemtation of cycle finder using path search """
         branch_points = []
         branch_dict = {}
-        #search_space = self.graph.copy()
 
         for s in self.sources:
             path = [s]
@@ -81,12 +83,15 @@ class NetworkGraph:
                         break
 
                 else:
-                    next = self.graph.successors(last)[0]
+                    next_node = self.graph.successors(last)[0]
 
-                    if next in path:
+                    if next_node in path:
                         # A cycle has been found
-                        ind = path.index(next)
-                        self.cycles.append(path[ind:])
+                        ind = path.index(next_node)
+                        cycle = path[ind:]
+                        # Ensure cycle hasn't already been found
+                        if set(cycle) not in [set(x) for x in self.cycles]:
+                            self.cycles.append(cycle)
 
                         # Need to stop searching and go back to last branch to continue
                         if branch_points:
@@ -108,28 +113,66 @@ class NetworkGraph:
                         if last not in branch_points:
                             branch_points.append(last)
                             branch_dict[last] = list(self.graph.successors(last))
-                            branch_dict[last].remove(next)
+                            branch_dict[last].remove(next_node)
 
-                    path.append(next)
+                    path.append(next_node)
 
 
-    def printCycles(self):
-        for c in self.cycles:
-            c = c[:]    # Copy to avoid updating original list object
-            c.append(c[0])  # To illustrate returning to starting point
-            s = '->'.join([str(x) for x in c])
-            print s
+    def printCycles(self, output_file=None):
+
+        if output_file:
+            f = open(output_file, "w")
+            for c in self.cycles:
+                f.write(','.join(c))
+            f.close()
+
+        else:
+            for c in self.cycles:
+                c = c[:]    # Copy to avoid updating original list object
+                c.append(c[0])  # To illustrate returning to starting point
+                s = '->'.join([str(x) for x in c])
+                print s
+
 
     def findVolcanos(self):
-        pass
+        """ Find volcano patterns by flipping direction of all nodes and searching for black holes """
+
+        # First reverse the graph
+        self.graph.reverse()
+
+        # Find blackholes
+        self.volcanoes = self.iBlackHoles()
+
+        # Return graph to original state
+        self.graph.reverse()
+
 
     def findBlackHoles(self):
-        pass
+        """ Use the blackHole algorithm to find black holes """
+
+        self.black_holes = self.iBlackHoles()
+
 
     def adjacencyMatrix(self):
         """ Return an adjacency matrix repn for the graph """
         M = None
         return M
+
+
+    def iBlackHoles(self):
+        """
+        Implements the iBlackHole algorithm to find all blackhole patterns in the graph
+        See (Li, Xiong, Liu et al.), Proceedings IEEE International Conference on Data Mining,
+        ICDM, 2010, (294-303).
+
+        The algorithm prunes incompatible nodes to reduce the search space
+
+        :return: List of blackholes in the graph
+        """
+        blackholes = []
+
+        return blackholes
+
 
     def findMaximalCliques(self):
         """
@@ -145,6 +188,7 @@ class NetworkGraph:
            X := X union {v}
         """
         self.BronKerbosh(set(), set(self.graph.nodes()), set(), 0)
+
 
     def BronKerbosh(self, R, P, X, depth):
         # Comprehensive testing needed on the use of set objects rather than lists
