@@ -4,7 +4,7 @@
 Class utilising the NetworkX graph object with manual implementation of key algorithms
 """
 import networkx as nx
-import pandas as pd
+import itertools
 
 
 class NetworkGraph:
@@ -141,7 +141,7 @@ class NetworkGraph:
         self.graph.reverse()
 
         # Find blackholes
-        self.volcanoes = self.iBlackHoles()
+        self.volcanoes = self.iBlackHoles(50)[:]
 
         # Return graph to original state
         self.graph.reverse()
@@ -150,7 +150,7 @@ class NetworkGraph:
     def findBlackHoles(self):
         """ Use the blackHole algorithm to find black holes """
 
-        self.black_holes = self.iBlackHoles()
+        self.black_holes = self.iBlackHoles(50)[:]
 
 
     def adjacencyMatrix(self):
@@ -159,7 +159,7 @@ class NetworkGraph:
         return M
 
 
-    def iBlackHoles(self):
+    def iBlackHoles(self, n):
         """
         Implements the iBlackHole algorithm to find all blackhole patterns in the graph
         See (Li, Xiong, Liu et al.), Proceedings IEEE International Conference on Data Mining,
@@ -170,8 +170,72 @@ class NetworkGraph:
         :return: List of blackholes in the graph
         """
         blackholes = []
+        # TODO - only append maximal subgraphs
+
+        for i in range(2, n+1):
+            P = [node for node, outdegree in self.graph.out_degree(self.graph.nodes()).items() if outdegree < i]
+            for v in P:
+                # Check if v has a successor not in P. If it does, remove v and all predecessors
+                missing_successors = [c for c in self.graph.successors(v) if c not in P]
+                if len(missing_successors) > 0:
+                    P.remove(v)
+                    for p in self.graph.predecessors(v):
+                        if p in P:
+                            P.remove(p)
+            for v in P:
+                # Check the closure of v -> those with a size of i are candidate black holes
+                v_plus = self.closure(v)
+                if len(v_plus) > i:
+                    P.remove(v)
+                    for p in self.graph.predecessors(v):
+                        if p in P:
+                            P.remove(p)
+                elif len(v_plus) == i:
+                    # Add to blackhole list
+                    blackholes.append(v_plus)
+                    P.remove(v)
+                    for p in self.graph.predecessors(v):
+                        if p in P:
+                            P.remove(p)
+
+            # For the remaining nodes we do a brute force check on all possible subgraphs of size i
+            for B in list(itertools.combinations(P, i)):
+                B = self.graph.subgraph(B)
+
+                # Check if B is connected
+                if nx.is_connected(B.to_undirected()):
+                    S = [item for sublist in [self.graph.successors(v) for v in B] for item in sublist]
+                    # If B is a blackhole then the union of successors(v) for all v in B is contained in B
+                    O = [v for v in S if v not in B.nodes()]
+                    if len(O) == 0:
+                        blackholes.append(list(B))
 
         return blackholes
+
+
+    def bruteForceBlackholes(self, n):
+        """ Find blackholes of size n by checking all possible subgraphs """
+        blackholes = []
+
+        for B in list(itertools.combinations(self.graph.nodes(), n)):
+            B = self.graph.subgraph(B)
+
+            # Check if B is connected
+            if nx.is_connected(B.to_undirected()):
+                S = [item for sublist in [self.graph.successors(v) for v in B] for item in sublist]
+                # If B is a blackhole then the union of successors(v) for all v in B is contained in B
+                O = [v for v in S if v not in B.nodes()]
+                if len(O) == 0:
+                    blackholes.append(list(B))
+
+        return blackholes
+
+
+    def closure(self, node):
+        """ Find the closure of a node ie all nodes reachable from it """
+        node_plus = [node]
+
+        return node_plus
 
 
     def findMaximalCliques(self):
@@ -210,27 +274,59 @@ if __name__ == "__main__":
 
     # Simple unit tests
 
-    edges2 = [(1, 2, 1), (2, 3, 1), (3, 4, 1), (3, 5, 1), (5, 4, 1), (4, 2, 1)]
-    n2 = NetworkGraph(edges2)
-    #n2.findCycles()
-    #n2.printCycles()
-    n2.slowCycles()
-    n2.printCycles()
-    print(n2.cycles)
+    print ("Cycle tests\n")
+    edges = [(1, 2, 1), (2, 3, 1), (3, 4, 1), (3, 5, 1), (5, 4, 1), (4, 2, 1)]
+    n1 = NetworkGraph(edges)
+    n1.slowCycles()
+    n1.printCycles()
+    print(n1.cycles)
 
-    for n in n2.graph.nodes():
-        print list(nx.all_neighbors(n2.graph, n))
+    for n in n1.graph.nodes():
+        print list(nx.all_neighbors(n1.graph, n))
 
-    n2.findMaximalCliques()
-    print(n2.maximal_cliques)
+    print ("\nClique tests")
+    n1.findMaximalCliques()
+    print(n1.maximal_cliques)
 
-    print(list(nx.find_cliques(n2.graph.to_undirected())))
+    print(list(nx.find_cliques(n1.graph.to_undirected())))
 
-    print("Test graph input")
+    print("\nTest graph input")
     g=nx.DiGraph()
-    g.add_weighted_edges_from(edges2)
+    g.add_weighted_edges_from(edges)
 
-    n3 = NetworkGraph(g)
+    n2 = NetworkGraph(g)
     print(n2.sources)
+
+    print("\nBlackhole tests")
+    edges2 = [(1, 2, 1),
+              (2, 3, 1),
+              (1, 3, 1),
+              (4, 3, 1),
+              (5, 1, 1),
+              (5, 4, 1),
+              (4, 7, 1),
+              (4, 6, 1),
+              (6, 5, 1),
+              (8, 5, 1),
+              (5, 9, 1),
+              (6, 10, 1),
+              (6, 11, 1),
+              (9, 12, 1),
+              (10, 9, 1),
+              (10, 11, 1),
+              (11, 12, 1),
+              (13, 9, 1),
+              (13, 12, 1)]
+    n3 = NetworkGraph(edges2)
+    n3.findBlackHoles()
+    n3.findVolcanos()
+
+    print(n3.volcanoes)
+    print(n3.black_holes)
+
+    print n3.bruteForceBlackholes(3)
+    print n3.bruteForceBlackholes(5)
+
+
 
 
