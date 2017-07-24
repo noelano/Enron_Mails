@@ -134,23 +134,23 @@ class NetworkGraph:
                 print s
 
 
-    def findVolcanos(self):
+    def findVolcanos(self, max_size=50):
         """ Find volcano patterns by flipping direction of all nodes and searching for black holes """
 
         # First reverse the graph
         self.graph.reverse(copy=False)
 
         # Find blackholes
-        self.volcanoes = self.iBlackHoles(50)[:]
+        self.volcanoes = self.iBlackHoles(max_size)[:]
 
         # Return graph to original state
         self.graph.reverse(copy=False)
 
 
-    def findBlackHoles(self):
+    def findBlackHoles(self, max_size=50):
         """ Use the blackHole algorithm to find black holes """
 
-        self.black_holes = self.iBlackHoles(50)[:]
+        self.black_holes = self.iBlackHoles(max_size)[:]
 
 
     def adjacencyMatrix(self):
@@ -172,7 +172,7 @@ class NetworkGraph:
         blackholes = []
         # TODO - only append maximal subgraphs
 
-        for i in range(2, n+1):
+        for i in range(n, 1, -1):
             P = [node for node, outdegree in self.graph.out_degree(self.graph.nodes()).items() if outdegree < i]
             for v in P:
                 # Check if v has a successor not in P. If it does, remove v and all predecessors
@@ -191,8 +191,14 @@ class NetworkGraph:
                         if p in P:
                             P.remove(p)
                 elif len(v_plus) == i:
-                    # Add to blackhole list
-                    blackholes.append(v_plus)
+                    # Add to blackhole list if a superset is not already present
+                    subset_indicator = 0
+                    for s in blackholes:
+                        if set(v_plus).issubset(set(s)):
+                            subset_indicator = 1
+                            break
+                    if subset_indicator == 0:
+                        blackholes.append(v_plus)
                     P.remove(v)
                     for p in self.graph.predecessors(v):
                         if p in P:
@@ -208,7 +214,13 @@ class NetworkGraph:
                     # If B is a blackhole then the union of successors(v) for all v in B is contained in B
                     O = [v for v in S if v not in B.nodes()]
                     if len(O) == 0:
-                        blackholes.append(list(B))
+                        subset_indicator = 0
+                        for s in blackholes:
+                            if set(B).issubset(set(s)):
+                                subset_indicator = 1
+                                break
+                        if subset_indicator == 0:
+                            blackholes.append(list(B))
 
         return blackholes
 
@@ -318,8 +330,8 @@ if __name__ == "__main__":
               (13, 9, 1),
               (13, 12, 1)]
     n3 = NetworkGraph(edges2)
-    n3.findBlackHoles()
-    n3.findVolcanos()
+    n3.findBlackHoles(5)
+    n3.findVolcanos(5)
 
     print(n3.volcanoes)
     print(n3.black_holes)
