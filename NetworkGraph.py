@@ -25,6 +25,10 @@ class NetworkGraph:
         self.black_holes = []
         self.volcanoes = []
         self.distances = None
+        self.closures = {}          # Stores the closure set of each node
+
+        for node in self.graph.nodes():
+            self.closures[node] = self.closure(node)[:]
 
 
     def findCycles(self):
@@ -170,7 +174,6 @@ class NetworkGraph:
         :return: List of blackholes in the graph
         """
         blackholes = []
-        # TODO - only append maximal subgraphs
 
         for i in range(n, 1, -1):
             P = [node for node, outdegree in self.graph.out_degree(self.graph.nodes()).items() if outdegree < i]
@@ -245,7 +248,7 @@ class NetworkGraph:
 
     def closure(self, node):
         """ Find the closure of a node ie all nodes reachable from it """
-        node_plus = [node]
+        node_plus = [node] + list(nx.descendants(self.graph, node))
 
         return node_plus
 
@@ -295,6 +298,10 @@ if __name__ == "__main__":
 
     for n in n1.graph.nodes():
         print list(nx.all_neighbors(n1.graph, n))
+
+    print "\nClosure tests"
+    for v in n1.graph.nodes():
+        print v, n1.closures[v]
 
     print ("\nClique tests")
     n1.findMaximalCliques()
