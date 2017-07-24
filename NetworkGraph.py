@@ -9,13 +9,13 @@ import itertools
 
 class NetworkGraph:
 
-    def __init__(self, input):
+    def __init__(self, graph_input):
         """ Initialise the graph object using the edgelist provided """
-        if isinstance(input, list):
+        if isinstance(graph_input, list):
             self.graph = nx.DiGraph()
-            self.graph.add_weighted_edges_from(input)
-        elif isinstance(input, nx.DiGraph):
-            self.graph = input
+            self.graph.add_weighted_edges_from(graph_input)
+        elif isinstance(graph_input, nx.DiGraph):
+            self.graph = graph_input
 
         self.cycles = []            # List of cycles
         self.components = []        # List of connected components
@@ -138,13 +138,13 @@ class NetworkGraph:
         """ Find volcano patterns by flipping direction of all nodes and searching for black holes """
 
         # First reverse the graph
-        self.graph.reverse()
+        self.graph.reverse(copy=False)
 
         # Find blackholes
         self.volcanoes = self.iBlackHoles(50)[:]
 
         # Return graph to original state
-        self.graph.reverse()
+        self.graph.reverse(copy=False)
 
 
     def findBlackHoles(self):
