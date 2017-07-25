@@ -24,11 +24,8 @@ class NetworkGraph:
         self.maximal_cliques = []
         self.black_holes = []
         self.volcanoes = []
-        self.distances = None
+        self.distances = nx.shortest_path_length(self.graph, source=None, target=None, weight='weight')
         self.closures = {}          # Stores the closure set of each node
-
-        for node in self.graph.nodes():
-            self.closures[node] = self.closure(node)[:]
 
 
     def findCycles(self):
@@ -299,9 +296,10 @@ if __name__ == "__main__":
     for n in n1.graph.nodes():
         print list(nx.all_neighbors(n1.graph, n))
 
-    print "\nClosure tests"
-    for v in n1.graph.nodes():
-        print v, n1.closures[v]
+    print "\nDistances tests"
+    print "d(1, 2) =", n1.distances[1][2]
+    print "d(2, 4) =", n1.distances[2][4]
+    print "d(1, 5) =", n1.distances[1][5]
 
     print ("\nClique tests")
     n1.findMaximalCliques()
