@@ -24,7 +24,7 @@ class NetworkGraph:
         self.maximal_cliques = []
         self.black_holes = []
         self.volcanoes = []
-        self.distances = nx.shortest_path_length(self.graph, source=None, target=None, weight='weight')
+        #self.distances = nx.shortest_path_length(self.graph, source=None, target=None, weight='weight')
         self.closures = {}          # Stores the closure set of each node
 
 
@@ -205,22 +205,27 @@ class NetworkGraph:
                             P.remove(p)
 
             # For the remaining nodes we do a brute force check on all possible subgraphs of size i
-            for B in list(itertools.combinations(P, i)):
-                B = self.graph.subgraph(B)
+            # First, filter down to only those connected components within the remaining nodes
+            G = self.graph.subgraph(P)
+            components = list(nx.weakly_connected_component_subgraphs(G))
+            large_components = [c for c in components if len(c) >= i]
+            for c in large_components:
+                for B in list(itertools.combinations(c.nodes_iter(), i)):
+                    B = self.graph.subgraph(B)
 
-                # Check if B is connected
-                if nx.is_connected(B.to_undirected()):
-                    S = [item for sublist in [self.graph.successors(v) for v in B] for item in sublist]
-                    # If B is a blackhole then the union of successors(v) for all v in B is contained in B
-                    O = [v for v in S if v not in B.nodes()]
-                    if len(O) == 0:
-                        subset_indicator = 0
-                        for s in blackholes:
-                            if set(B).issubset(set(s)):
-                                subset_indicator = 1
-                                break
-                        if subset_indicator == 0:
-                            blackholes.append(list(B))
+                    # Check if B is connected
+                    if nx.is_connected(B.to_undirected()):
+                        S = [item for sublist in [self.graph.successors(v) for v in B] for item in sublist]
+                        # If B is a blackhole then the union of successors(v) for all v in B is contained in B
+                        O = [v for v in S if v not in B.nodes()]
+                        if len(O) == 0:
+                            subset_indicator = 0
+                            for s in blackholes:
+                                if set(B).issubset(set(s)):
+                                    subset_indicator = 1
+                                    break
+                            if subset_indicator == 0:
+                                blackholes.append(list(B))
 
         return blackholes
 
@@ -229,7 +234,7 @@ class NetworkGraph:
         """ Find blackholes of size n by checking all possible subgraphs """
         blackholes = []
 
-        for B in list(itertools.combinations(self.graph.nodes(), n)):
+        for B in list(itertools.combinations(self.graph.nodes_iter(), n)):
             B = self.graph.subgraph(B)
 
             # Check if B is connected
@@ -287,7 +292,7 @@ if __name__ == "__main__":
     # Simple unit tests
 
     print ("Cycle tests\n")
-    edges = [(1, 2, 1), (2, 3, 1), (3, 4, 1), (3, 5, 1), (5, 4, 1), (4, 2, 1)]
+    edges = [(1, 2, 3), (2, 3, 1), (3, 4, 5), (3, 5, 1), (5, 4, 1), (4, 2, 1)]
     n1 = NetworkGraph(edges)
     n1.slowCycles()
     n1.printCycles()
@@ -295,11 +300,6 @@ if __name__ == "__main__":
 
     for n in n1.graph.nodes():
         print list(nx.all_neighbors(n1.graph, n))
-
-    print "\nDistances tests"
-    print "d(1, 2) =", n1.distances[1][2]
-    print "d(2, 4) =", n1.distances[2][4]
-    print "d(1, 5) =", n1.distances[1][5]
 
     print ("\nClique tests")
     n1.findMaximalCliques()
